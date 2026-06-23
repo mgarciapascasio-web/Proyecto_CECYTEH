@@ -1,39 +1,35 @@
 import streamlit as st
 import gspread
-from datetime import datetime
 
-# Conexión con Google Sheets
-gc = gspread.service_account(filename='credenciales.json')
-sh = gc.open("Registro_CECYTEH_Metztitlan")
-hoja = sh.sheet1
+# 1. Configuración de la página
+st.set_page_config(page_title="Registro CECyTEH", page_icon="🎓")
 
-st.title("🎓 Registro CECyTEH - Metztitlán")
-
-# Lista de carreras oficiales
-carreras_lista = [
-    "Preparación de Alimentos y Bebidas", 
-    "Procesos de Gestión Administrativa", 
-    "Soporte y Gestión de Tecnologías Informáticas", 
-    "Enfermería General"
-]
-
-# Formulario
-with st.form("registro_form"):
-    nombre = st.text_input("Nombre del alumno")
-    carrera = st.selectbox("Carrera", carreras_lista)
-    semestre = st.selectbox("Semestre", ["1", "2", "3", "4", "5", "6"])
-    grupo = st.text_input("Grupo")
-    tutor = st.text_input("Nombre del Tutor")
-    observaciones = st.text_area("Observaciones")
-    violentometro = st.slider("Nivel de Violentómetro", 0, 10, 0)
+# 2. Conexión segura a Google Sheets
+def conectar_gsheets():
+    # Usamos los datos guardados en la sección 'Secrets' de Streamlit
+    creds_dict = dict(st.secrets["gcp_service_account"])
+    gc = gspread.service_account_from_dict(creds_dict)
     
-    submit = st.form_submit_button("Guardar Registro")
+    # IMPORTANTE: Asegúrate de que este nombre sea EXACTAMENTE el de tu archivo en Google Drive
+    sh = gc.open("Registro_CECYTEH_Metztitlán") 
+    return sh.sheet1
 
-if submit:
-    try:
-        fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
-        # El orden coincide con: Fecha, Nombre, Carrera, Semestre, Grupo, Tutor, Observaciones, Violentómetro
-        hoja.append_row([fecha, nombre, carrera, semestre, grupo, tutor, observaciones, violentometro])
-        st.success("¡Registro guardado exitosamente!")
-    except Exception as e:
-        st.error(f"Error al guardar: {e}")
+# 3. Interfaz de usuario
+st.title("🎓 Registro de Estudiantes - CECyTEH")
+st.write("Completa los datos para el registro:")
+
+with st.form("registro_form"):
+    nombre = st.text_input("Nombre del Estudiante")
+    matricula = st.text_input("Matrícula")
+    submit = st.form_submit_button("Registrar")
+
+    if submit:
+        if nombre and matricula:
+            try:
+                sheet = conectar_gsheets()
+                sheet.append_row([nombre, matricula])
+                st.success(f"¡Registro exitoso de {nombre}!")
+            except Exception as e:
+                st.error(f"Error de conexión: {e}")
+        else:
+            st.warning("Por favor, llena todos los campos.")
