@@ -10,7 +10,7 @@ def conectar_gsheets():
     creds_dict = dict(st.secrets["gcp_service_account"])
     gc = gspread.service_account_from_dict(creds_dict)
     
-    # IMPORTANTE: Asegúrate de que este nombre sea EXACTAMENTE el de tu archivo en Google Drive
+    # Asegúrate de que el nombre del archivo en Google Drive sea exactamente este:
     sh = gc.open("Registro_CECYTEH_Metztitlán") 
     return sh.sheet1
 
