@@ -6,17 +6,18 @@ st.set_page_config(page_title="Registro CECyTEH", page_icon="🎓")
 
 # Conexión a Google Sheets
 def conectar_gsheets():
-    # Usamos las credenciales de los Secrets
-    creds_dict = dict(st.secrets["gcp_service_account"])
-    # Reparamos el formato de la llave privada
-    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+    # Cargar credenciales desde los secretos de Streamlit
+    creds = dict(st.secrets["gcp_service_account"])
     
-    gc = gspread.service_account_from_dict(creds_dict)
+    # REPARACIÓN DE FORMATO: Convierte los \n escritos en saltos de línea reales
+    if "private_key" in creds:
+        creds["private_key"] = creds["private_key"].replace("\\n", "\n")
+    
+    gc = gspread.service_account_from_dict(creds)
     sh = gc.open("Registro_CECYTEH_Metztitlán")
     return sh.sheet1
 
 st.title("🎓 Registro de Estudiantes - CECyTEH")
-st.write("Completa los datos para el registro:")
 
 with st.form("registro_form"):
     nombre = st.text_input("Nombre del Estudiante")
@@ -27,7 +28,6 @@ with st.form("registro_form"):
         if nombre and matricula:
             try:
                 sheet = conectar_gsheets()
-                # Aquí es donde se envían los datos a la hoja
                 sheet.append_row([nombre, matricula])
                 st.success(f"¡Registro exitoso de {nombre}!")
             except Exception as e:
