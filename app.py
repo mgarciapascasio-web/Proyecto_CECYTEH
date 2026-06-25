@@ -7,7 +7,7 @@ from datetime import datetime
 st.set_page_config(page_title="Registro CECyTEH", page_icon="🎓")
 
 def conectar_gsheets():
-    # Cargar credenciales
+    # Cargar credenciales desde los secretos
     creds_dict = dict(st.secrets["gcp_service_account"])
     creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
     
@@ -19,10 +19,9 @@ def conectar_gsheets():
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     gc = gspread.authorize(creds)
     
-    # Abrir el documento mediante su ID
+    # Abrir por ID
     sh = gc.open_by_key("1HS8LB5Y79KXvgaco_Ry420thbPNRKpOQObC6AhREMJQ")
-    
-    # Acceder a la primera hoja disponible (índice 0)
+    # Acceder a la hoja por su índice (la primera hoja es la 0)
     return sh.get_worksheet(0)
 
 st.title("🎓 Registro de Estudiantes - CECyTEH")
@@ -46,15 +45,13 @@ with st.form("registro_form"):
     if submit:
         try:
             fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
-            # Conectar y obtener la hoja
             hoja = conectar_gsheets()
             
-            # Datos alineados con las 8 columnas del archivo
+            # Datos alineados con las 8 columnas:
+            # [Fecha, Nombre, Carrera, Semestre, Grupo, Tutor, Observaciones, Violentómetro]
             datos = [fecha, nombre, carrera, semestre, grupo, tutor, observaciones, violento]
             
-            # Agregar la fila
             hoja.append_row(datos)
             st.success("✅ ¡Registro guardado exitosamente!")
         except Exception as e:
-            # Mostramos el error detallado para diagnosticar qué pasa
-            st.error(f"Error técnico al conectar: {str(e)}")
+            st.error(f"Error final: {str(e)}")
