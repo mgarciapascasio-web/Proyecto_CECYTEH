@@ -7,7 +7,7 @@ from datetime import datetime
 st.set_page_config(page_title="Registro CECyTEH", page_icon="🎓")
 
 def conectar_gsheets():
-    # Cargar credenciales desde los secretos
+    # Cargar credenciales desde los secretos de Streamlit
     creds_dict = dict(st.secrets["gcp_service_account"])
     creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
     
@@ -19,9 +19,10 @@ def conectar_gsheets():
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     gc = gspread.authorize(creds)
     
-    # Abrir por ID utilizando el ID correcto de tu archivo
+    # Abrir el archivo por ID y seleccionar específicamente la pestaña "Hoja 1"
     sh = gc.open_by_key("1HS8LB5Y79KXvgaco_Ry420thbPNRKpOQObC6AhREMJQ")
-    return sh.sheet1
+    hoja = sh.worksheet("Hoja 1")
+    return hoja
 
 st.title("🎓 Registro de Estudiantes - CECyTEH")
 
@@ -43,11 +44,11 @@ with st.form("registro_form"):
 
     if submit:
         try:
-            fecha = datetime.now().strftime("%d/%m/%Y")
+            fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
             hoja = conectar_gsheets()
             
-            # Datos alineados con las 8 columnas: 
-            # Fecha, Nombre, Carrera, Semestre, Grupo, Tutor, Observaciones, Violentómetro 
+            # Datos alineados con las 8 columnas del CSV:
+            # [Fecha, Nombre, Carrera, Semestre, Grupo, Tutor, Observaciones, Violentómetro]
             datos = [fecha, nombre, carrera, semestre, grupo, tutor, observaciones, violento]
             
             hoja.append_row(datos)
