@@ -19,10 +19,11 @@ def conectar_gsheets():
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     gc = gspread.authorize(creds)
     
-    # Abrir el archivo por ID y seleccionar específicamente la pestaña "Hoja 1"
+    # Abrir el archivo por ID (ID extraído de tu URL: 1HS8LB5Y79KXvgaco_Ry420thbPNRKpOQObC6AhREMJQ)
     sh = gc.open_by_key("1HS8LB5Y79KXvgaco_Ry420thbPNRKpOQObC6AhREMJQ")
-    hoja = sh.worksheet("Hoja 1")
-    return hoja
+    
+    # Acceder a la primera hoja (evita errores de nombre)
+    return sh.get_worksheet(0)
 
 st.title("🎓 Registro de Estudiantes - CECyTEH")
 
@@ -47,11 +48,10 @@ with st.form("registro_form"):
             fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
             hoja = conectar_gsheets()
             
-            # Datos alineados con las 8 columnas del CSV:
-            # [Fecha, Nombre, Carrera, Semestre, Grupo, Tutor, Observaciones, Violentómetro]
+            # Datos alineados con las 8 columnas de tu archivo [cite: 2]
             datos = [fecha, nombre, carrera, semestre, grupo, tutor, observaciones, violento]
             
             hoja.append_row(datos)
             st.success("✅ ¡Registro guardado exitosamente!")
         except Exception as e:
-            st.error(f"Error al conectar con la hoja: {str(e)}")
+            st.error(f"Error técnico al conectar: {str(e)}")
