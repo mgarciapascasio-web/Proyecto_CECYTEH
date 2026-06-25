@@ -6,16 +6,22 @@ from datetime import datetime
 st.set_page_config(page_title="Registro CECyTEH", page_icon="🎓")
 
 def conectar_gsheets():
-    # Cargar credenciales desde los secretos
+    # Obtener el diccionario de credenciales
     creds_dict = dict(st.secrets["gcp_service_account"])
+    
+    # Asegurar que el salto de línea en la clave privada sea correcto
     creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
     
-    # PERMISOS COMPLETOS
-    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    # Definir los alcances (scopes) necesarios para acceder a Sheets y Drive
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
     
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     gc = gspread.authorize(creds)
-    # Abre la hoja
+    
+    # Abrir la hoja por nombre
     sh = gc.open("Registro_CECYTEH_Metztitlán")
     return sh.sheet1
 
