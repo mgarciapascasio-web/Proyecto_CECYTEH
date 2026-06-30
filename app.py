@@ -4,13 +4,10 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime
 import pandas as pd
 
-# Configuración de página
+# Configuración
 st.set_page_config(page_title="Registro CECyTEH", page_icon="🎓", layout="wide")
-
-# Estilo profesional
 st.markdown("<h1 style='text-align: center; color: #004a99;'>🎓 Sistema CECyTEH</h1>", unsafe_allow_html=True)
 
-# Función de conexión
 def conectar_gsheets():
     creds_dict = dict(st.secrets["gcp_service_account"])
     creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
@@ -20,10 +17,8 @@ def conectar_gsheets():
     sh = gc.open_by_key("1O_SXAlng9f6GKmv566Jw-A2dbJwFiFFZcObin4S1g-c")
     return sh.sheet1
 
-# Crear pestañas
 tab1, tab2 = st.tabs(["📝 Registrar Incidencia", "📊 Ver Registros"])
 
-# --- PESTAÑA 1: REGISTRO ---
 with tab1:
     with st.form("registro_form", clear_on_submit=True):
         st.write("### Captura de Datos")
@@ -43,34 +38,42 @@ with tab1:
             grupo = st.text_input("Grupo").upper()
             
         tutor = st.text_input("Nombre del Tutor").upper()
-        observaciones = st.text_area("Observaciones")
+        observaciones = st.text_area("Observaciones", height=150) # Espacio amplio
         violento = st.slider("Nivel de Violentómetro", 0, 10, 5)
         
         submit = st.form_submit_button("Guardar Registro")
 
         if submit:
-            try:
-                hoja = conectar_gsheets()
-                fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                datos = [fecha, nombre, carrera, semestre, grupo, tutor, observaciones, violento]
-                hoja.append_row(datos)
-                
-                # Alertas visuales según el nivel
-                if violento >= 8:
-                    st.error(f"⚠️ ¡ALERTA! Nivel crítico ({violento}) registrado.")
-                elif violento >= 5:
-                    st.warning(f"⚠️ Precaución: Nivel {violento} detectado.")
-                else:
-                    st.success("✅ ¡Registro guardado exitosamente!")
-                
-                # Recargar para limpiar campos
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error técnico: {e}")
+            # 1. Validación de campos obligatorios
+            if not nombre or not grupo or not tutor:
+                st.error("⚠️ Error: Por favor, llena todos los campos (Nombre, Grupo y Tutor son obligatorios).")
+            else:
+                try:
+                    hoja = conectar_gsheets()
+                    fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    datos = [fecha, nombre, carrera, semestre, grupo, tutor, observaciones, violento]
+                    hoja.append_row(datos)
+                    
+                    # 2. Notificaciones inteligentes
+                    if violento >= 8:
+                        st.toast("¡Alerta! Caso crítico registrado", icon="🚨")
+                        st.error(f"⚠️ ¡Nivel crítico ({violento}) detectado! Se requiere atención inmediata.")
+                    elif violento >= 5:
+                        st.toast("Registro guardado con precaución", icon="⚠️")
+                        st.warning(f"⚠️ Precaución: Nivel {violento} detectado.")
+                    else:
+                        st.toast("¡Registro guardado con éxito!", icon="✅")
+                        st.success("✅ ¡Información registrada correctamente!")
+                        
+                except Exception as e:
+                    # 3. Detector de errores avanzado
+                    st.error("❌ No se pudo conectar con la base de datos.")
+                    with st.expander("Ver detalles técnicos"):
+                        st.write(f"Error: {e}")
 
-# --- PESTAÑA 2: CONSULTA ---
 with tab2:
     st.subheader("📋 Historial de Registros")
+    st.write("💡 *Tip: Si el texto es muy largo, haz clic en la celda para leerlo completo.*")
     if st.button("Actualizar tabla"):
         try:
             hoja = conectar_gsheets()
@@ -81,4 +84,4 @@ with tab2:
             else:
                 st.info("La tabla está vacía.")
         except Exception as e:
-            st.warning("No se pudieron cargar los registros. Verifica tu conexión.")
+            st.warning("No se pudieron cargar los registros.")
