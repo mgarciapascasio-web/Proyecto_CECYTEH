@@ -6,7 +6,13 @@ import pandas as pd
 
 # Configuración
 st.set_page_config(page_title="Registro CECyTEH", page_icon="🎓", layout="wide")
-st.markdown("<h1 style='text-align: center; color: #004a99;'>🎓 Sistema CECyTEH</h1>", unsafe_allow_html=True)
+
+# Cabecera con espacio para logo (opcional) y título
+col1, col2 = st.columns([1, 6])
+with col1:
+    st.write("### 🏫") # Aquí podrías poner st.image("tu_logo.png")
+with col2:
+    st.markdown("<h1 style='color: #004a99;'>Sistema CECyTEH</h1>", unsafe_allow_html=True)
 
 def conectar_gsheets():
     creds_dict = dict(st.secrets["gcp_service_account"])
@@ -31,22 +37,21 @@ with tab1:
             "Enfermería General"
         ])
         
-        col1, col2 = st.columns(2)
-        with col1:
+        col_c1, col_c2 = st.columns(2)
+        with col_c1:
             semestre = st.selectbox("Semestre", ["1", "2", "3", "4", "5", "6"])
-        with col2:
+        with col_c2:
             grupo = st.text_input("Grupo").upper()
             
         tutor = st.text_input("Nombre del Tutor").upper()
-        observaciones = st.text_area("Observaciones", height=150) # Espacio amplio
+        observaciones = st.text_area("Observaciones", height=150)
         violento = st.slider("Nivel de Violentómetro", 0, 10, 5)
         
         submit = st.form_submit_button("Guardar Registro")
 
         if submit:
-            # 1. Validación de campos obligatorios
             if not nombre or not grupo or not tutor:
-                st.error("⚠️ Error: Por favor, llena todos los campos (Nombre, Grupo y Tutor son obligatorios).")
+                st.error("⚠️ Error: Por favor, llena todos los campos obligatorios.")
             else:
                 try:
                     hoja = conectar_gsheets()
@@ -54,33 +59,40 @@ with tab1:
                     datos = [fecha, nombre, carrera, semestre, grupo, tutor, observaciones, violento]
                     hoja.append_row(datos)
                     
-                    # 2. Notificaciones inteligentes
                     if violento >= 8:
                         st.toast("¡Alerta! Caso crítico registrado", icon="🚨")
-                        st.error(f"⚠️ ¡Nivel crítico ({violento}) detectado! Se requiere atención inmediata.")
-                    elif violento >= 5:
-                        st.toast("Registro guardado con precaución", icon="⚠️")
-                        st.warning(f"⚠️ Precaución: Nivel {violento} detectado.")
+                        st.error(f"⚠️ ¡Nivel crítico ({violento}) detectado!")
                     else:
                         st.toast("¡Registro guardado con éxito!", icon="✅")
                         st.success("✅ ¡Información registrada correctamente!")
-                        
                 except Exception as e:
-                    # 3. Detector de errores avanzado
-                    st.error("❌ No se pudo conectar con la base de datos.")
-                    with st.expander("Ver detalles técnicos"):
-                        st.write(f"Error: {e}")
+                    st.error("❌ Error de conexión.")
+                    with st.expander("Detalles"): st.write(e)
 
 with tab2:
     st.subheader("📋 Historial de Registros")
-    st.write("💡 *Tip: Si el texto es muy largo, haz clic en la celda para leerlo completo.*")
-    if st.button("Actualizar tabla"):
+    if st.button("🔄 Actualizar tabla"):
         try:
             hoja = conectar_gsheets()
             rows = hoja.get_all_values()
             if len(rows) > 1:
                 df = pd.DataFrame(rows[1:], columns=rows[0])
+                
+                # BUSCADOR
+                busqueda = st.text_input("🔍 Buscar por nombre de alumno...")
+                if busqueda:
+                    df = df[df['Nombre del Alumno'].str.contains(busqueda, case=False, na=False)]
+                
                 st.dataframe(df, use_container_width=True)
+                
+                # BOTÓN DE DESCARGA
+                csv = df.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📥 Descargar tabla a Excel (CSV)",
+                    data=csv,
+                    file_name='reporte_cecyteh.csv',
+                    mime='text/csv',
+                )
             else:
                 st.info("La tabla está vacía.")
         except Exception as e:
