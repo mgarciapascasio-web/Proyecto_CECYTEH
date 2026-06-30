@@ -55,7 +55,6 @@ with tab1:
                     fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     hoja.append_row([fecha, matricula, nombre, carrera, semestre, grupo, tutor, observaciones, violento])
                     
-                    # Notificaciones inteligentes
                     if violento >= 8:
                         st.toast("¡Alerta! Caso crítico registrado", icon="🚨")
                         st.error(f"⚠️ ¡Nivel crítico ({violento}) detectado!")
@@ -67,7 +66,7 @@ with tab1:
                         st.success("✅ ¡Información registrada correctamente!")
                 except Exception as e:
                     st.error("❌ Error al guardar en base de datos.")
-                    with st.expander("Detalles"): st.write(e)
+                    with st.expander("Detalles técnicos"): st.write(e)
 
 with tab2:
     st.subheader("📋 Historial de Registros")
@@ -81,7 +80,6 @@ with tab2:
         except:
             st.error("Error al conectar con Google Sheets.")
 
-    # Mantenimiento de la tabla mediante session_state
     if 'data_loaded' in st.session_state:
         busqueda = st.text_input("🔍 Buscar por Matrícula...", key="input_busqueda")
         
@@ -90,7 +88,16 @@ with tab2:
             mask = st.session_state.df['Matrícula'].str.contains(busqueda.strip().upper(), case=False, na=False)
             df_mostrar = st.session_state.df[mask]
         
-        st.dataframe(df_mostrar, use_container_width=True)
+        # MEJORA: Colorear filas según nivel de violencia
+        def colorear_violencia(row):
+            val = int(row['Nivel de Violentómetro'])
+            if val >= 8: return ['background-color: #ffcccc'] * len(row)
+            if val >= 5: return ['background-color: #fff3cc'] * len(row)
+            return [''] * len(row)
+        
+        styled_df = df_mostrar.style.apply(colorear_violencia, axis=1)
+        
+        st.dataframe(styled_df, use_container_width=True, hide_index=True)
         
         csv = df_mostrar.to_csv(index=False).encode('utf-8')
         st.download_button("📥 Descargar tabla a CSV", csv, "reporte_cecyteh.csv", "text/csv")
