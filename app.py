@@ -4,6 +4,7 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime
 import pandas as pd
 
+# Configuración inicial
 st.set_page_config(page_title="Registro CECyTEH", page_icon="🎓", layout="wide")
 
 st.markdown("<h1 style='text-align: center; color: #004a99;'>🎓 Sistema CECyTEH</h1>", unsafe_allow_html=True)
@@ -18,13 +19,13 @@ def conectar_gsheets():
     sh = gc.open_by_key("1O_SXAlng9f6GKmv566Jw-A2dbJwFiFFZcObin4S1g-c")
     return sh.sheet1
 
+# Pestañas
 tab1, tab2 = st.tabs(["📝 Registrar Incidencia", "📊 Ver Registros"])
 
 with tab1:
     with st.form("registro_form", clear_on_submit=True):
         st.write("### ✍️ Captura de Nueva Incidencia")
         
-        # Campo nuevo: Matrícula
         matricula = st.text_input("Matrícula del Alumno").strip().upper()
         nombre = st.text_input("Nombre del Alumno").strip().upper()
         
@@ -40,45 +41,56 @@ with tab1:
         with c2: grupo = st.text_input("Grupo").strip().upper()
             
         tutor = st.text_input("Nombre del Tutor").strip().upper()
-        observaciones = st.text_area("Observaciones", height=120)
+        observaciones = st.text_area("Observaciones", height=150)
         violento = st.slider("Nivel de Violentómetro", 0, 10, 0)
         
         submit = st.form_submit_button("Guardar Registro")
 
         if submit:
-            if not matricula or not nombre:
-                st.error("⚠️ Error: La Matrícula y el Nombre son obligatorios.")
+            if not matricula or not nombre or not grupo or not tutor:
+                st.error("⚠️ Error: Todos los campos son obligatorios.")
             else:
                 try:
                     hoja = conectar_gsheets()
                     fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    datos = [fecha, matricula, nombre, carrera, semestre, grupo, tutor, observaciones, violento]
-                    hoja.append_row(datos)
-                    st.toast("¡Incidencia registrada!", icon="✅")
-                    st.success("✅ Registro guardado exitosamente.")
+                    hoja.append_row([fecha, matricula, nombre, carrera, semestre, grupo, tutor, observaciones, violento])
+                    
+                    # Notificaciones inteligentes
+                    if violento >= 8:
+                        st.toast("¡Alerta! Caso crítico registrado", icon="🚨")
+                        st.error(f"⚠️ ¡Nivel crítico ({violento}) detectado!")
+                    elif violento >= 5:
+                        st.toast("Registro guardado con precaución", icon="⚠️")
+                        st.warning(f"⚠️ Precaución: Nivel {violento} detectado.")
+                    else:
+                        st.toast("¡Registro guardado con éxito!", icon="✅")
+                        st.success("✅ ¡Información registrada correctamente!")
                 except Exception as e:
-                    st.error("❌ Error al guardar.")
+                    st.error("❌ Error al guardar en base de datos.")
+                    with st.expander("Detalles"): st.write(e)
 
 with tab2:
     st.subheader("📋 Historial de Registros")
-    if st.button("🔄 Actualizar y Cargar Datos"):
+    
+    if st.button("🔄 Cargar/Actualizar tabla"):
         try:
             hoja = conectar_gsheets()
             rows = hoja.get_all_values()
-            if len(rows) > 1:
-                df = pd.DataFrame(rows[1:], columns=rows[0])
-                
-                # BUSCADOR POR MATRÍCULA
-                busqueda = st.text_input("🔍 Buscar por Matrícula...").strip().upper()
-                
-                if busqueda:
-                    mask = df['Matrícula'].str.contains(busqueda, case=False, na=False)
-                    st.dataframe(df[mask], use_container_width=True)
-                else:
-                    st.dataframe(df, use_container_width=True)
-                
-                st.download_button("📥 Descargar reporte a CSV", df.to_csv(index=False).encode('utf-8'), "reporte.csv", "text/csv")
-            else:
-                st.info("La tabla está vacía.")
-        except Exception as e:
-            st.warning("No se pudieron cargar los datos.")
+            st.session_state.df = pd.DataFrame(rows[1:], columns=rows[0])
+            st.session_state.data_loaded = True
+        except:
+            st.error("Error al conectar con Google Sheets.")
+
+    # Mantenimiento de la tabla mediante session_state
+    if 'data_loaded' in st.session_state:
+        busqueda = st.text_input("🔍 Buscar por Matrícula...", key="input_busqueda")
+        
+        df_mostrar = st.session_state.df
+        if busqueda:
+            mask = st.session_state.df['Matrícula'].str.contains(busqueda.strip().upper(), case=False, na=False)
+            df_mostrar = st.session_state.df[mask]
+        
+        st.dataframe(df_mostrar, use_container_width=True)
+        
+        csv = df_mostrar.to_csv(index=False).encode('utf-8')
+        st.download_button("📥 Descargar tabla a CSV", csv, "reporte_cecyteh.csv", "text/csv")
