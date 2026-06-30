@@ -2,6 +2,7 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
+import pandas as pd
 
 # Configuración de página
 st.set_page_config(page_title="Registro CECyTEH", page_icon="🎓", layout="wide")
@@ -24,7 +25,7 @@ tab1, tab2 = st.tabs(["📝 Registrar Incidencia", "📊 Ver Registros"])
 
 # --- PESTAÑA 1: REGISTRO ---
 with tab1:
-    with st.form("registro_form"):
+    with st.form("registro_form", clear_on_submit=True):
         st.write("### Captura de Datos")
         nombre = st.text_input("Nombre del Alumno").upper()
         
@@ -53,7 +54,17 @@ with tab1:
                 fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 datos = [fecha, nombre, carrera, semestre, grupo, tutor, observaciones, violento]
                 hoja.append_row(datos)
-                st.success("✅ ¡Registro guardado exitosamente!")
+                
+                # Alertas visuales según el nivel
+                if violento >= 8:
+                    st.error(f"⚠️ ¡ALERTA! Nivel crítico ({violento}) registrado.")
+                elif violento >= 5:
+                    st.warning(f"⚠️ Precaución: Nivel {violento} detectado.")
+                else:
+                    st.success("✅ ¡Registro guardado exitosamente!")
+                
+                # Recargar para limpiar campos
+                st.rerun()
             except Exception as e:
                 st.error(f"Error técnico: {e}")
 
@@ -63,8 +74,11 @@ with tab2:
     if st.button("Actualizar tabla"):
         try:
             hoja = conectar_gsheets()
-            data = hoja.get_all_values()
-            # El primer registro es el encabezado
-            st.table(data)
+            rows = hoja.get_all_values()
+            if len(rows) > 1:
+                df = pd.DataFrame(rows[1:], columns=rows[0])
+                st.dataframe(df, use_container_width=True)
+            else:
+                st.info("La tabla está vacía.")
         except Exception as e:
             st.warning("No se pudieron cargar los registros. Verifica tu conexión.")
