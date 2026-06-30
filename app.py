@@ -7,7 +7,7 @@ import pandas as pd
 # Configuración inicial
 st.set_page_config(page_title="Sistema Integral CECyTEH", page_icon="🎓", layout="wide")
 
-# ESTILOS MEJORADOS: Fuerza visibilidad de texto en modo oscuro
+# CSS para visibilidad perfecta en modo oscuro y claro
 st.markdown("""
     <style>
     .stApp { color: #FFFFFF !important; }
@@ -53,7 +53,7 @@ with tab1:
                     try:
                         hoja = conectar_gsheets()
                         fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        hoja.append_row([fecha, matricula, nombre, carrera, semestre, grupo, tutor, observaciones, violento])
+                        hoja.append_row([fecha, matricula, nombre, carrera, semestre, grupo, tutor, observaciones, int(violento)])
                         if violento >= 8: st.error(f"⚠️ Alerta: Nivel crítico ({violento}) registrado.")
                         else: st.success("✅ ¡Incidencia guardada!")
                     except: st.error("❌ Error de conexión.")
@@ -90,12 +90,14 @@ with tab2:
         if busqueda:
             df_mostrar = df_mostrar[df_mostrar['Matrícula'].str.contains(busqueda, case=False, na=False)]
         
-        # Función de alto contraste: Texto legible sobre el color de fondo
         def highlight_row(row):
             val = int(row['Nivel de Violentómetro'])
-            if val >= 8: return ['background-color: #8B0000; color: white'] * len(row) # Rojo oscuro, texto blanco
-            if val >= 5: return ['background-color: #B8860B; color: black'] * len(row) # Dorado, texto negro
+            if val >= 8: return ['background-color: #8B0000; color: white'] * len(row)
+            if val >= 5: return ['background-color: #B8860B; color: black'] * len(row)
             return [''] * len(row)
 
         st.dataframe(df_mostrar.style.apply(highlight_row, axis=1), use_container_width=True, hide_index=True)
-        st.download_button("📥 Descargar Reporte", df.to_csv(index=False).encode('utf-8'), "reporte_cecyteh.csv")
+        
+        # Corrección de exportación para Excel (UTF-8 con BOM)
+        csv = df_mostrar.to_csv(index=False).encode('utf-8-sig')
+        st.download_button("📥 Descargar Reporte", csv, "reporte_cecyteh.csv", "text/csv")
